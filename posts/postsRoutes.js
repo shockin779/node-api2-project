@@ -47,10 +47,27 @@ router.put('/:id', (req, res) => {
         .catch(err => res.status(500).json({ error: "The post information could not be modified." }))
 });
 
+router.delete('/:id', (req, res) => {
+    const id = req.params.id;
+    db.findById(id)
+        .then(post => {
+            if(post.length < 1) {
+                res.status(404).json({ message: "The post with the specified ID does not exist." });
+            } else {
+                db.remove(post.id)
+                    .then(numRecords => {
+                        res.status(200).json(post);
+                    })
+                    .catch(err => res.status(500).json({ error: "The post could not be removed" }));
+            }
+        })
+})
+
 router.get('/:id/comments', (req, res) => {
     const id = req.params.id;
     db.findPostComments(id)
         .then(comments => {
+            console.log(comments)
             if(comments.length < 1) {
                 res.status(404).json({ message: "The post with the specified ID does not exist." });
             } else {
@@ -61,8 +78,25 @@ router.get('/:id/comments', (req, res) => {
 })
 
 router.post('/:id/comments', (req, res) => {
+    const id = req.params.id;
     const newComment = req.body;
-    db.insertComment()
+    if(!newComment.text) {
+        res.status(400).json({ errorMessage: "Please provide text for the comment." });
+    } else {
+        db.findById(id)
+            .then(post => {
+                if(post.length !== 1) {
+                    res.status(404).json({ message: "The post with the specified ID does not exist." });
+                } else {
+                    db.insertComment(newComment)
+                        .then(comment => {
+                            res.status(201).json(comment);
+                        })
+                        .catch(err => res.status(500).json({ error: "There was an error while saving the comment to the database" }))
+                }
+            })
+            .catch(err => res.status(500).json({ error: "There was an error while saving the comment to the database" }))
+    }   
 })
 
 module.exports = router;
