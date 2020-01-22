@@ -11,12 +11,12 @@ router.get('/', (req, res) => {
 
 router.post('/', (req, res) => {
     const post = req.body
-    if(!post.title && !post.contents) {
+    if(!post.title || !post.contents) {
         res.status(400).json({ errorMessage: "Please provide title and contents for the post." });
     } else {
         db.insert(post)
             .then(returnedPost => {
-                res.status(200).json(returnedPost);
+                res.status(201).json(returnedPost);
             })
             .catch(err => res.status(500).json({ error: "There was an error while saving the post to the database" }));
     }
@@ -38,10 +38,15 @@ router.get('/:id', (req, res) => {
 router.put('/:id', (req, res) => {
     const id = req.params.id;
     const updatedPost = req.body;
+    if(!updatedPost.title && !updatedPost.contents) {
+        res.status(400).json({ errorMessage: "Please provide title and contents for the post." });
+    }
     db.update(id, updatedPost)
         .then(changedPost => {
-            if(!changedPost) {
-                res.status()
+            if(changedPost < 1) {
+                res.status(404).json({ message: "The post with the specified ID does not exist." });
+            } else {
+                res.status(200).json(changedPost);
             }
         })
         .catch(err => res.status(500).json({ error: "The post information could not be modified." }))
@@ -54,7 +59,7 @@ router.delete('/:id', (req, res) => {
             if(post.length < 1) {
                 res.status(404).json({ message: "The post with the specified ID does not exist." });
             } else {
-                db.remove(post.id)
+                db.remove(id)
                     .then(numRecords => {
                         res.status(200).json(post);
                     })
@@ -67,7 +72,6 @@ router.get('/:id/comments', (req, res) => {
     const id = req.params.id;
     db.findPostComments(id)
         .then(comments => {
-            console.log(comments)
             if(comments.length < 1) {
                 res.status(404).json({ message: "The post with the specified ID does not exist." });
             } else {
@@ -88,6 +92,8 @@ router.post('/:id/comments', (req, res) => {
                 if(post.length !== 1) {
                     res.status(404).json({ message: "The post with the specified ID does not exist." });
                 } else {
+                    newComment.post_id = post[0].id
+                    console.log(newComment);
                     db.insertComment(newComment)
                         .then(comment => {
                             res.status(201).json(comment);
